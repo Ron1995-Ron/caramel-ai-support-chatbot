@@ -10,7 +10,7 @@ not sure, and reaching a person.
 The visual direction follows the reference screens supplied with this PRD (section 4). This PRD
 changes the presentation and interaction design of the existing chat screen. It does not add
 features, change the backend, or change the escalation or streaming behavior defined in
-`prd.md` and `specs/001-support-chat-assistant/`.
+`001-prd.md` and `specs/001-support-chat-assistant/`.
 
 ## 2. Users and Context
 

@@ -1,0 +1,393 @@
+openapi: 3.1.0
+info:
+  title: Caramel AI Support Chat - Auth API
+  version: 0.3.0
+  description: |
+    Customer sign-up, verification, sign-in, sign-out, refresh, and password reset (AUTH-1 to
+    AUTH-16, spec 003-spec-auth). Credentials are delivered only as HttpOnly cookies. Clients
+    never read or store them (Principle VII). State-changing requests need the CSRF header
+    described under components.parameters.CsrfHeader.
+
+    Chat, feedback, and escalation endpoints (contracts/chat-api.yaml in spec 001) now require
+    a valid session. Their added responses are listed under "Protected endpoints" below.
+
+servers:
+  - url: /api
+
+tags:
+  - name: auth
+    description: Account and session operations
+
+paths:
+  /auth/csrf:
+    get:
+      tags: [auth]
+      summary: Issue the CSRF token cookie
+      description: Sets the readable XSRF-TOKEN cookie. Called once when the app loads, before any state-changing request.
+      responses:
+        "204":
+          description: Cookie set
+
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: Create an account and send a verification email (AUTH-1, AUTH-2)
+      description: |
+        Returns the same response whether or not the email is already registered (AUTH-13). If it
+        is registered, the owner receives a notice instead of a new account.
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequest"
+      responses:
+        "202":
+          description: Accepted. Check your email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "422":
+          description: Password rule failed. The problem code names the rule (AUTH-8).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+
+  /auth/verify-email:
+    post:
+      tags: [auth]
+      summary: Confirm an email address (AUTH-2)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "204":
+          description: Verified
+        "410":
+          description: Link is expired, used, or superseded. The customer can request a new one.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /auth/resend-verification:
+    post:
+      tags: [auth]
+      summary: Send a new verification email and invalidate earlier links (AUTH-14)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "202":
+          description: Accepted. The same response whether or not the email is registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        "503":
+          $ref: "#/components/responses/Problem"
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Sign in and set the session cookies (AUTH-3)
+      description: |
+        Sets the access cookie (about 15 minutes) and the refresh cookie (limited to /api/auth).
+        A correct password on an unverified account returns EMAIL_NOT_VERIFIED. Five failures for
+        an account or a source within 15 minutes lock that key for 15 minutes (AUTH-9).
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in
+          headers:
+            Set-Cookie:
+              description: Access and refresh cookies, both HttpOnly and SameSite=Lax; Secure outside local development
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentAccount"
+        "401":
+          description: Invalid credentials. Same text whether or not the email is registered.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Email not verified (returned only after the correct password)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          description: Locked after repeated failures. Same text whether or not the email is registered.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate the refresh credential and renew the access credential (AUTH-11)
+      description: |
+        Refused when the session has been idle for more than 15 minutes, or when it is past its
+        30-day cap. A reused refresh credential revokes the session (REFRESH_REUSE).
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "204":
+          description: Renewed. New cookies are set.
+        "401":
+          $ref: "#/components/responses/Problem"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: End the session on the server and clear cookies (AUTH-4)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "204":
+          description: Session revoked. Other devices stay signed in (AUTH-15).
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Send a password reset link (AUTH-7)
+      description: Same response whether or not the email is registered (AUTH-13).
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Accepted"
+        "503":
+          $ref: "#/components/responses/Problem"
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Set a new password with a reset link (AUTH-7, AUTH-8, AUTH-16)
+      description: On success, every session for the account is revoked on every device.
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetRequest"
+      responses:
+        "204":
+          description: Password changed. All sessions revoked.
+        "410":
+          description: Link is expired or used.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Password rule failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: The current account (AUTH-12)
+      description: Used by the route guard on load. Also renews the idle timer.
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentAccount"
+        "401":
+          $ref: "#/components/responses/Problem"
+
+  /sessions:
+    post:
+      tags: [chat]
+      summary: Start a chat session for the signed-in customer (replaces the anonymous create)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "201":
+          description: Created. The session is owned by the signed-in account.
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          description: Email not verified (EMAIL_NOT_VERIFIED) or CSRF token missing or wrong.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  # Protected endpoints. Every chat, feedback, and escalation operation in contracts/chat-api.yaml
+  # (spec 001) adds these responses:
+  #   401 UNAUTHENTICATED         no valid signed-in session
+  #   403 EMAIL_NOT_VERIFIED      signed in but not verified (chat blocked, AUTH-2)
+  #   404 SESSION_NOT_FOUND       session does not exist, expired, or belongs to another customer (AUTH-6)
+  # Escalation tickets carry the account ID and email (AUTH-10).
+
+components:
+  parameters:
+    CsrfHeader:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: Copy of the XSRF-TOKEN cookie. Required on every POST, PUT, and DELETE.
+      schema:
+        type: string
+
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          description: At most 72 bytes, counted in UTF-8 bytes by the server. JSON Schema maxLength counts characters, so it is not used here. Spaces are kept as typed.
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    TokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: The one-time value from the email link.
+
+    ResetRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 12
+          description: At most 72 bytes, counted in UTF-8 bytes by the server.
+
+    Accepted:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: Check your email for the next step.
+
+    CurrentAccount:
+      type: object
+      required: [accountId, email]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        verified:
+          type: boolean
+
+    Problem:
+      type: object
+      description: Problem details. "code" is stable; "detail" is safe customer text.
+      required: [type, title, status, code, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+          enum:
+            - UNAUTHENTICATED
+            - EMAIL_NOT_VERIFIED
+            - INVALID_CREDENTIALS
+            - ACCOUNT_LOCKED
+            - PASSWORD_TOO_SHORT
+            - PASSWORD_TOO_LONG
+            - PASSWORD_BREACHED
+            - TOKEN_INVALID
+            - TOKEN_EXPIRED
+            - SESSION_NOT_FOUND
+            - CSRF_INVALID
+            - EMAIL_UNAVAILABLE
+            - VALIDATION_FAILED
+        detail:
+          type: string

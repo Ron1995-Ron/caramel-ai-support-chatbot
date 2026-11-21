@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Feature description not provided; derived from prd.md (MVP scope)."
+**Input**: User description: "Feature description not provided; derived from 001-prd.md (MVP scope)."
 
 ## User Scenarios & Testing *(mandatory)*
 

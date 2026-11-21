@@ -2,7 +2,7 @@
 
 **Branch**: `002-chat-ui-v2` (no branch created) | **Date**: 2026-11-14 | **Spec**: [prd-ui-2.md](../../prd-ui-2.md)
 
-**Input**: The UI product requirements in [prd-ui-2.md](../../prd-ui-2.md), with the product context in [prd.md](../../prd.md), the existing behavior in [001 spec](../001-support-chat-assistant/spec.md), and the governing rules in [constitution.md](../../.specify/memory/constitution.md) (v1.2.2).
+**Input**: The UI product requirements in [prd-ui-2.md](../../prd-ui-2.md), with the product context in [001-prd.md](../../001-prd.md), the existing behavior in [001 spec](../001-support-chat-assistant/spec.md), and the governing rules in [constitution.md](../../.specify/memory/constitution.md) (v1.2.2).
 
 ## Summary
 

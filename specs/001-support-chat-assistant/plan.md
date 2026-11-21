@@ -2,7 +2,7 @@
 
 **Branch**: `001-support-chat-assistant` (no branch created) | **Date**: 2026-11-14 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from [spec.md](spec.md), with the product context in [prd.md](../../prd.md) and the governing rules in [constitution.md](../../.specify/memory/constitution.md).
+**Input**: Feature specification from [spec.md](spec.md), with the product context in [001-prd.md](../../001-prd.md) and the governing rules in [constitution.md](../../.specify/memory/constitution.md).
 
 ## Summary
 
@@ -62,7 +62,7 @@ decision.
 | V. No transcript storage without a retention policy | Spec's escalation wording says the ticket includes the session transcript. That would store a transcript in a third-party system with no retention policy. | **CONFLICT: resolved in plan** |
 
 **Resolution for the conflict**: Until `CHAT_RETENTION_POLICY` is recorded in the constitution
-or `prd.md`, the escalation ticket contains the session reference, the escalation reason, and
+or `001-prd.md`, the escalation ticket contains the session reference, the escalation reason, and
 the customer's latest message only. It does not contain the full transcript. In-memory session
 history used for multi-turn context is held only for the session's life and is not persisted
 (see research.md R3). This is a planning decision, not a spec change. The spec's escalation

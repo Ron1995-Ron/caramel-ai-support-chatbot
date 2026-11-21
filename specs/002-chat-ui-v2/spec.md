@@ -160,5 +160,5 @@ The whole screen, including the header, the message box, and the answers, is usa
 - Self-hosted fonts are used if the team accepts self-hosting (PRD open question 4). Without that decision, a system font is used.
 - Dark mode is out of scope for this feature (PRD open question 5).
 - The visual direction, including the gradient background and glass surfaces, is the approved reference direction. The design owner confirms the direction before implementation starts (PRD open question 8).
-- Customers are anonymous and the MVP does not require sign-in (PRD open question on authentication, prd.md section 10).
+- Customers are anonymous and the MVP does not require sign-in (PRD open question on authentication, 001-prd.md section 10).
 - Traffic volume is not known. Success criteria are measured per user test, not per load (PRD section 10).
