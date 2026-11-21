@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: Caramel AI Support Chat API
+  version: 0.1.0
+  description: >
+    Backend HTTP and SSE contract for the MVP chat assistant. The backend holds the Google AI
+    Studio key; no endpoint returns it (Principle II). Sessions are anonymous and held in memory
+    (research.md R3).
+servers:
+  - url: /api
+paths:
+  /sessions:
+    post:
+      summary: Start a new chat session
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionCreated"
+  /sessions/{sessionId}/messages:
+    get:
+      summary: Get the current session's messages (FR-006)
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Messages in order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+    post:
+      summary: Send a customer message and stream the assistant's reply (FR-002)
+      description: >
+        Returns a Server-Sent Events stream. Events are emitted in this order: zero or more
+        `token` events, then exactly one of `done` or `error`. The client MUST treat a stream
+        that ends without `done` or `error` as a failure and show an error (FR-008).
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerMessageRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: |
+                    event: token
+                    data: {"delta":"To set up "}
+
+                    event: token
+                    data: {"delta":"an API key..."}
+
+                    event: done
+                    data: {"messageId":"6f1c2a3e-0000-4000-8000-000000000001"}
+                failure:
+                  value: |
+                    event: error
+                    data: {"code":"PROVIDER_UNAVAILABLE","message":"The assistant could not answer right now. Please try again, or ask for a human agent."}
+        "400":
+          description: Message is blank
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+        "413":
+          description: Message is longer than 4,000 characters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /sessions/{sessionId}/messages/{messageId}/feedback:
+    put:
+      summary: Record or change a thumbs up/down rating on an assistant message (FR-007)
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackRequest"
+      responses:
+        "204":
+          description: Rating recorded (created or updated)
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+        "422":
+          description: Message is not an assistant message in this session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /sessions/{sessionId}/escalations:
+    post:
+      summary: Request a human agent; creates a support ticket (FR-005)
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationCreated"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+        "503":
+          description: Ticketing system unavailable; the customer is told and can retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    SessionNotFound:
+      description: Session does not exist or has expired
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    SessionCreated:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+    CustomerMessageRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    FeedbackRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: string
+          enum: [up, down]
+    Message:
+      type: object
+      required: [id, role, content, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [customer, assistant]
+        content:
+          type: string
+        status:
+          type: string
+          enum: [complete, failed]
+        createdAt:
+          type: string
+          format: date-time
+        rating:
+          type: string
+          enum: [up, down]
+          description: Present on assistant messages that have been rated
+    EscalationCreated:
+      type: object
+      required: [ticketRef, status]
+      properties:
+        ticketRef:
+          type: string
+        status:
+          type: string
+          enum: [created]
+    Problem:
+      type: object
+      description: RFC 9457 problem details
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+          description: Stable error code for the UI (for example PROVIDER_UNAVAILABLE, MESSAGE_TOO_LONG)

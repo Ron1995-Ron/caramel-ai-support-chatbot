@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: chat-backend
+  config:
+    # GOOGLE_API_KEY lives in the project-root .env (Principle II). The backend may be started
+    # from the repository root or from backend/, so both locations are tried.
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
+  ai:
+    google:
+      genai:
+        api-key: ${GOOGLE_API_KEY:}
+        chat:
+          options:
+            model: gemma-4-26b-a4b-it
+            temperature: 0.2
+            # gemma-4 streams its reasoning as ordinary text, which would reach the customer and
+            # add seconds before the first token (SC-001). MINIMAL keeps the reply clean.
+            # thinking-budget: 0 is rejected by the model, so do not use it.
+            thinking-level: MINIMAL
+
+caramel:
+  chat:
+    # Customer message limit (data-model.md: "1 to 4,000 characters, not blank")
+    max-message-length: 4000
+    # Session expires 30 minutes after lastActivityAt (research.md R3)
+    session-idle-timeout: 30m
+    # Rough budget for conversation history sent to the model (approx. 4 chars per token)
+    history-token-budget: 6000
+    # Time allowed for the provider to start producing output before the customer sees an error
+    provider-timeout: 30s
+    support-content-location: classpath:support-content.md
+    cors-allowed-origins: http://localhost:5176
+
+server:
+  port: 8083
+
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
+  level:
+    # Keep HTTP client wire logging off: prompts may hold personal data (Principle V)
+    org.springframework.web.client: INFO
+    com.google.genai: WARN
+    io.netty: WARN

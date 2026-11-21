@@ -1,0 +1,32 @@
+# Secrets (Principle II): never commit
+.env
+.env.*
+!.env.example
+
+# Backend (Java / Maven)
+backend/target/
+*.class
+*.jar
+.gradle/
+backend/build/
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+*.log
+
+# Python virtualenv used by Spec Kit tooling
+.venv/
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.run-logs/
+
+# MCP config holds an inline GitHub token (see CLAUDE.md); keep out of the repo
+.mcp.json

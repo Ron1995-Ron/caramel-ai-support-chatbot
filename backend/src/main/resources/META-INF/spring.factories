@@ -1,0 +1,1 @@
+org.springframework.boot.EnvironmentPostProcessor=com.caramelai.support.chat.config.EnvConfig

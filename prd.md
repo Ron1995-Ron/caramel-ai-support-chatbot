@@ -1,0 +1,91 @@
+# PRD: Caramel AI Tech Support Chat Assistant
+
+## 1. Objective
+
+Build a customer service chat assistant that answers technical support questions about LLM inferencing for Caramel AI, an LLM inferencing company similar to OpenRouter.
+
+## 2. Users
+
+- **Customers** using Caramel AI's LLM inferencing service who need help with setup, API usage, errors, and billing-adjacent technical questions.
+
+## 3. Goals
+
+- Answer common LLM inferencing support questions quickly and accurately.
+- Reduce load on the human support team for routine technical issues.
+- Hand off to a human agent when the assistant cannot resolve an issue.
+
+## 4. Scope
+
+### In scope (MVP)
+
+- Web-based chat UI where a customer can send messages and receive streamed responses.
+- Multi-turn conversation within a session (the assistant remembers earlier messages in the same chat).
+- Answers grounded in Caramel AI technical support content (docs, FAQs, known errors).
+- Clear fallback message and escalation path when the assistant is unsure.
+
+### Out of scope (MVP)
+
+- Account-specific actions (e.g., changing plans, issuing refunds).
+- Voice support.
+- Multi-language support.
+- Long-term chat history across sessions.
+
+## 5. Functional Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-1 | Customer can start a new chat session and send text messages. | Must |
+| FR-2 | Assistant responses stream to the UI as they are generated. | Must |
+| FR-3 | Conversation context is maintained for the duration of a session. | Must |
+| FR-4 | Assistant answers using Caramel AI support knowledge and states when it does not know. | Must |
+| FR-5 | Customer can request a human agent, and the assistant offers escalation when it cannot resolve an issue. | Must |
+| FR-6 | Chat history is visible in the UI for the current session. | Should |
+| FR-7 | Customer can give thumbs up/down feedback on each response. | Should |
+
+## 6. Technical Requirements
+
+| Layer | Choice |
+|-------|--------|
+| Frontend | React + TypeScript |
+| Backend | Java + Spring Boot |
+| AI framework | Spring AI |
+| LLM | `gemma-4-26b-a4b-it` |
+| LLM provider | Google AI Studio |
+| Secrets | Google AI Studio API key stored in a `.env` file at the project root, loaded by the backend as `GOOGLE_API_KEY` |
+
+### Architecture
+
+- **Frontend (React/TypeScript):** Chat UI, message list, input box, streaming display, escalation action.
+- **Backend (Java/Spring Boot):** REST/streaming endpoints for chat, session handling, and escalation logic.
+- **AI layer (Spring AI):** Chat client configured for Gemma via Google AI Studio, reading the API key from the `.env` file, with system prompt defining the Caramel AI support persona and rules.
+- **Knowledge source:** Caramel AI support content provided to the model as context (e.g., retrieval over docs/FAQs). Approach to be confirmed (see Open Questions).
+
+## 7. Non-Functional Requirements
+
+- **Latency:** First token streamed to the UI within a few seconds of a user message (target to be validated).
+- **Reliability:** Graceful error message if the LLM provider is unavailable; no silent failures.
+- **Security:** The Google AI Studio API key is stored in `.env` and read by the backend only. It must never be sent to the frontend, committed to version control (`.env` must be listed in `.gitignore`), or written to logs.
+- **Privacy:** Avoid storing personal data in logs; define a retention policy for chat transcripts.
+- **Accuracy:** Assistant must not invent product behavior, pricing, or API details; it should say when it is unsure.
+
+## 8. Success Metrics
+
+- Share of conversations resolved without human escalation.
+- Customer satisfaction (thumbs up ratio on responses).
+- Escalation rate and reasons.
+- Median time to first response.
+
+## 9. Assumptions and Dependencies
+
+- A Google AI Studio API key with access to `gemma-4-26b-a4b-it`, provided by the team and added to `.env` before running the backend (`GOOGLE_API_KEY=<your-key>`).
+- A `.env` file at the project root (not committed to version control).
+- Caramel AI support content is available in a usable form (docs, FAQs, known issues).
+- A human support handoff channel exists (e.g., ticketing system or live chat queue).
+
+## 10. Open Questions
+
+- How will support content be supplied: static system prompt, or retrieval over a document store?
+- What is the exact escalation mechanism (ticket creation, email, live agent queue)?
+- Is authentication required for customers before chatting?
+- What are the data retention and compliance requirements for chat transcripts?
+- What is the expected traffic volume?

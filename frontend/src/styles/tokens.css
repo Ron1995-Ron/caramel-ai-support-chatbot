@@ -1,0 +1,37 @@
+/*
+ * Design tokens from prd-ui-2.md section 6. Values only. Components use these variables and do not
+ * hard-code colors, sizes, or radii (constitution Principle VI, UI-1).
+ */
+:root {
+  --sky: #a9cbf7;
+  --lilac: #c7b3f5;
+  --blush: #f5b8ee;
+  --gradient: linear-gradient(180deg, var(--sky) 0%, var(--lilac) 50%, var(--blush) 100%);
+
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-solid: rgba(255, 255, 255, 0.9);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+
+  --ink: #12131a;
+  --muted: #5b5f6e;
+  --accent: #6a56e0;
+  --rose: #a8184f;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+
+  --radius-composer: 24px;
+  --radius-card: 16px;
+  --radius-code: 12px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+
+  --shadow: 0 8px 24px rgba(18, 19, 26, 0.08);
+
+  --font-ui: Manrope, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-code: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
